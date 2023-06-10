@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
+const baseUrl = 'https://ecelis.sdf.org/photography/';
+
 const Background = styled.div`
   min-height: 100vh;
   background: black;
@@ -18,22 +20,58 @@ const Blur = styled.div`
 
 const Content = styled.div`
   position: absolute;
+  cursor: none !important;
   top: 0;
   left: 0;
+  text-align: center;
+  margin-bottom: 3em;
 `;
 
-const Photo = styled.img`
+const Preview = styled.img`
   position: relative;
   margin: auto;
-  top: 6em;
-  left: 3em;
-  width: 80%;
+  top: 3rem;
   max-width: 80%;
+  max-height: 80%:
   border: none;
   box-shadow: 0 0 2.5em rgba(0, 0, 0, 0.5);
 `;
 
-const baseUrl = 'https://celisdelafuente.net/photography/';
+const ThumbnailsDiv = styled.div`
+  display: block;
+  position: absolute;
+  overflow: hidden scroll;
+  white-space: pre-line;
+  background: rgba(255, 255, 255, 0.3);
+  padding: 1em;
+  border: none;
+  box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
+  max-height: 100px;
+  max-width: 100%;
+  bottom: 0px;
+  overflow: hidden;
+`;
+
+const Thumbnail = styled.img`
+  position: relative;
+  margin: 4px;
+  border: thin solid black;
+  max-height: 100px;
+`;
+
+const ThumbnailStrip = function({ data }) {
+  return (
+    <ThumbnailsDiv>
+      {data.map((item) => {
+        return <Thumbnail
+          key={`${baseUrl}${item.thumb[0]}`}
+          src={`${baseUrl}${item.thumb[0]}`}
+        />;
+      })}
+    </ThumbnailsDiv>
+  );
+}
+
 /* <a id="left" style={{ opacity: 0, visibility: 'visible' }}><div><img src="/left.png" /></div></a>
       <a id="right" style={{ opacity: 0, visibility: 'visible' }}><div><img src="/right.png" /></div></a> */
 export default function PhotoGallery({ dataUrl }) {
@@ -57,7 +95,7 @@ export default function PhotoGallery({ dataUrl }) {
         })
         .catch(error => setState({ error: error }));
     }
-  }, [state, current]);
+  }, [state]);
 
   useEffect(() => {
     if (state) {
@@ -75,10 +113,13 @@ export default function PhotoGallery({ dataUrl }) {
       <Background $src={srcUrl}>
         <Blur>
           <Content>
-            <Photo
+            <Preview
               src={srcUrl}
             />
           </Content>
+          <ThumbnailStrip
+            data={state}
+          />
         </Blur>
       </Background>
     );
