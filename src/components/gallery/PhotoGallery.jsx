@@ -5,7 +5,6 @@ const baseUrl = 'https://ecelis.sdf.org/photography/';
 
 const Background = styled.div`
   min-height: 100vh;
-  background: black;
   background-image: ${props => props.$src ? `url(${props.$src})` : `url('')`};
   background-position: center;
   background-size: cover;
@@ -18,24 +17,6 @@ const Blur = styled.div`
   backdrop-filter: blur(10px);
 `;
 
-const Content = styled.div`
-  position: absolute;
-  cursor: none !important;
-  top: 0;
-  left: 0;
-  text-align: center;
-  margin-bottom: 3em;
-`;
-
-const Preview = styled.img`
-  position: relative;
-  margin: auto;
-  top: 3rem;
-  max-width: 80%;
-  max-height: 80%:
-  border: none;
-  box-shadow: 0 0 2.5em rgba(0, 0, 0, 0.5);
-`;
 
 const ThumbnailsDiv = styled.div`
   display: block;
@@ -59,7 +40,131 @@ const Thumbnail = styled.img`
   max-height: 100px;
 `;
 
-const ThumbnailStrip = function({ data }) {
+
+const Slider = styled.div`
+    position: relative;
+    top: 3rem;
+    margin: auto;
+    z-index: 300;
+    width: 100%;
+    max-width: 800px;
+    height: 350px;
+    max-height: 80%;
+    overflow: hidden;
+    box-shadow: 0px 0px 16px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;`;
+
+const Slide = styled.div`
+    position: absolute;
+    width: 100%;
+    max-width: 800px;
+    height: 100%;
+    transition: all 0.5s;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+`;
+
+const CarouselButton = styled.button`
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    padding: 10px;
+    border: none;
+    border-radius: 50%;
+    z-index: 10px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    font-size: 18px;
+    ${props => `
+        ${props.direction === 'left' ? `
+        top: 45%;
+        left: 2%;
+        ` : `
+        top: 45%;
+        right: 2%;
+        `}
+    `}
+    &:active {
+        transform: scale(1.1);
+    }
+    &:hover {
+        transform: scale(1.1);
+    }
+`;
+
+export default function PhotoGallery({ dataUrl }) {
+  const [data, setData] = useState([]);
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    document.onkeydown = keyHandler;
+    console.log('do');
+  });
+
+  useEffect(() => {
+    if (data.length < 1) {
+      fetch(dataUrl,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(async response => {
+          const { data: json } = await response.json();
+          setData(json);
+          console.log(json[0].img[0])
+          setCurrent(0);
+        })
+        .catch(error => error);
+    }
+  }, [data]);
+
+  // useEffect(() => {
+  //   if (data.length > 0) {
+  //     setSrcUrl(
+  //       `${baseUrl}${data[current].img[0]}`
+  //     );
+  //   }
+  // });
+
+  const slideCount = data.length - 1;
+
+  const nextHandler = () => {
+    if(current === slideCount) {
+      setCurrent(0);
+    } else {
+      setCurrent(current + 1);
+    }
+  }
+
+  const prevHandler = () => {
+    if (current === 0) {
+      setCurrent(slideCount);
+    } else {
+      setCurrent(current - 1);
+    }
+  }
+
+  const keyHandler = e => {
+    e = e || window.event;
+    switch (e.code) {
+      case 'ArrowRight':
+        nextHandler();
+        break;
+      case 'ArrowLeft':
+        prevHandler();
+        break;
+      default:
+        break;
+    }
+  }
+  
+const ThumbnailStrip = function() {
   return (
     <ThumbnailsDiv>
       {data.map((item) => {
@@ -72,54 +177,32 @@ const ThumbnailStrip = function({ data }) {
   );
 }
 
-/* <a id="left" style={{ opacity: 0, visibility: 'visible' }}><div><img src="/left.png" /></div></a>
-      <a id="right" style={{ opacity: 0, visibility: 'visible' }}><div><img src="/right.png" /></div></a> */
-export default function PhotoGallery({ dataUrl }) {
-  const [state, setState] = useState(null);
-  const [current, setCurrent] = useState(0);
-  const [srcUrl, setSrcUrl] = useState('');
 
-  useEffect(() => {
-    if (!state) {
-      fetch(dataUrl,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        .then(async response => {
-          const { data } = await response.json();
-          setState(data);
-          setCurrent(0);
-        })
-        .catch(error => setState({ error: error }));
-    }
-  }, [state]);
-
-  useEffect(() => {
-    if (state) {
-      setSrcUrl(
-        `${baseUrl}${state[current].img[0]}`
-      );
-    }
-  });
-
-
-  if (!state) {
+  if (data.length < 1) {
     return <h1>Vacio</h1>
   } else {
     return (
-      <Background $src={srcUrl}>
+      <Background $src={`${baseUrl}${data[current].img[0]}`}>
         <Blur>
-          <Content>
-            <Preview
-              src={srcUrl}
-            />
-          </Content>
-          <ThumbnailStrip
-            data={state}
-          />
+          <Slider>
+            {data.map((photo, idx) => {
+                  return (
+                      <Slide key={photo.img[0]} style={{
+                        transform: `translateX(${100 * (idx - current)}%)`
+                    }}>
+                        <img id={idx} key={idx}
+                            src={`${baseUrl}${photo.img[0]}`}
+                            alt={photo.alt || `${photo.img[0].split('/')[1]}  by E. Celis`}
+                        />
+                    </Slide>
+                  )
+              })}
+              <CarouselButton direction="right"
+                  onClick={nextHandler}>{'>'}</CarouselButton>
+              <CarouselButton direction="left"
+                  onClick={prevHandler}>{'<'}</CarouselButton>
+          </Slider>
+          <ThumbnailStrip />
         </Blur>
       </Background>
     );
