@@ -1,108 +1,18 @@
 import { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import { Background, Blur } from './ImageBackground';
+import ThumbnailStrip from './ThumbnailStrip';
+import { Slider, Slide, CarouselButton } from './Carousel';
 
 const baseUrl = 'https://ecelis.sdf.org/photography/';
 
-const Background = styled.div`
-  min-height: 100vh;
-  background-image: ${props => props.$src ? `url(${props.$src})` : `url('')`};
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-`;
-
-const Blur = styled.div`
-  min-height: inherit;
-  background-color: rgb(255 255 255 / 0.3);
-  backdrop-filter: blur(10px);
-`;
-
-
-const ThumbnailsDiv = styled.div`
-  display: block;
-  position: absolute;
-  overflow: hidden scroll;
-  white-space: pre-line;
-  background: rgba(255, 255, 255, 0.3);
-  padding: 1em;
-  border: none;
-  box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
-  max-height: 100px;
-  max-width: 100%;
-  bottom: 0px;
-  overflow: hidden;
-`;
-
-const Thumbnail = styled.img`
-  position: relative;
-  margin: 4px;
-  border: thin solid black;
-  max-height: 100px;
-`;
-
-
-const Slider = styled.div`
-    position: relative;
-    top: 3rem;
-    margin: auto;
-    z-index: 300;
-    width: 100%;
-    max-width: 800px;
-    height: 350px;
-    max-height: 80%;
-    overflow: hidden;
-    box-shadow: 0px 0px 16px rgba(0, 0, 0, 0.5);
-    border-radius: 8px;`;
-
-const Slide = styled.div`
-    position: absolute;
-    width: 100%;
-    max-width: 800px;
-    height: 100%;
-    transition: all 0.5s;
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-`;
-
-const CarouselButton = styled.button`
-    position: absolute;
-    width: 40px;
-    height: 40px;
-    padding: 10px;
-    border: none;
-    border-radius: 50%;
-    z-index: 10px;
-    cursor: pointer;
-    background: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
-    font-size: 18px;
-    ${props => `
-        ${props.direction === 'left' ? `
-        top: 45%;
-        left: 2%;
-        ` : `
-        top: 45%;
-        right: 2%;
-        `}
-    `}
-    &:active {
-        transform: scale(1.1);
-    }
-    &:hover {
-        transform: scale(1.1);
-    }
-`;
 
 export default function PhotoGallery({ dataUrl }) {
   const [data, setData] = useState([]);
   const [current, setCurrent] = useState(0);
+  const [thumbStrip, setThumbStrip] = useState([]);
 
   useEffect(() => {
     document.onkeydown = keyHandler;
-    console.log('do');
   });
 
   useEffect(() => {
@@ -117,28 +27,25 @@ export default function PhotoGallery({ dataUrl }) {
         .then(async response => {
           const { data: json } = await response.json();
           setData(json);
-          console.log(json[0].img[0])
           setCurrent(0);
+          stripHandler(json, current);
         })
-        .catch(error => error);
+        .catch(error => console.log(error));
     }
   }, [data]);
-
-  // useEffect(() => {
-  //   if (data.length > 0) {
-  //     setSrcUrl(
-  //       `${baseUrl}${data[current].img[0]}`
-  //     );
-  //   }
-  // });
 
   const slideCount = data.length - 1;
 
   const nextHandler = () => {
-    if(current === slideCount) {
+    if (current === slideCount) {
       setCurrent(0);
+      stripHandler(data, current);
     } else {
-      setCurrent(current + 1);
+      const _current = current + 1;
+      setCurrent(_current);
+      leftOffset = [...data.slice(_current - 3, _current)];
+      rightOffset = [...data.slice(_current, _current + 3)];
+      setThumbStrip([...leftOffset, ...rightOffset]);
     }
   }
 
@@ -154,31 +61,34 @@ export default function PhotoGallery({ dataUrl }) {
     e = e || window.event;
     switch (e.code) {
       case 'ArrowRight':
-        nextHandler();
+        prevHandler();
         break;
       case 'ArrowLeft':
-        prevHandler();
+        nextHandler();
         break;
       default:
         break;
     }
   }
-  
-const ThumbnailStrip = function() {
-  return (
-    <ThumbnailsDiv>
-      {data.map((item) => {
-        return <Thumbnail
-          key={`${baseUrl}${item.thumb[0]}`}
-          src={`${baseUrl}${item.thumb[0]}`}
-        />;
-      })}
-    </ThumbnailsDiv>
-  );
-}
+
+  const stripHandler = (json, _current) => {
+    let left = [];
+    let right = [];
+    if (current === 0) {
+      left = [...json.slice(-2,)];
+      right = [...json.slice(0, 3)];
+      setThumbStrip([...left, ...right]);
+    }
+    if (current === slideCount) {
+      setCurrent(0);
+      left = [...json.slice(-3,)];
+      right = [...json.slice(0, 1)];
+      setThumbStrip([...leftOffset, ...rightOffset]);
+    } 
+  }
 
 
-  if (data.length < 1) {
+  if (thumbStrip.length < 1) {
     return <h1>Vacio</h1>
   } else {
     return (
@@ -186,23 +96,23 @@ const ThumbnailStrip = function() {
         <Blur>
           <Slider>
             {data.map((photo, idx) => {
-                  return (
-                      <Slide key={photo.img[0]} style={{
-                        transform: `translateX(${100 * (idx - current)}%)`
-                    }}>
-                        <img id={idx} key={idx}
-                            src={`${baseUrl}${photo.img[0]}`}
-                            alt={photo.alt || `${photo.img[0].split('/')[1]}  by E. Celis`}
-                        />
-                    </Slide>
-                  )
-              })}
-              <CarouselButton direction="right"
-                  onClick={nextHandler}>{'>'}</CarouselButton>
-              <CarouselButton direction="left"
-                  onClick={prevHandler}>{'<'}</CarouselButton>
+              return (
+                <Slide key={photo.img[0]} style={{
+                  transform: `translateX(${100 * (idx - current)}%)`
+                }}>
+                  <img id={idx} key={idx}
+                    src={`${baseUrl}${photo.img[0]}`}
+                    alt={photo.alt || `${photo.img[0].split('/')[1]}  by E. Celis`}
+                  />
+                </Slide>
+              )
+            })}
           </Slider>
-          <ThumbnailStrip />
+          <ThumbnailStrip thumbStrip={thumbStrip} />
+          <CarouselButton direction="right"
+            onClick={prevHandler}>{'>'}</CarouselButton>
+          <CarouselButton direction="left"
+            onClick={nextHandler}>{'<'}</CarouselButton>
         </Blur>
       </Background>
     );
